@@ -1,0 +1,90 @@
+######################################################
+# NAME: oemlog.lr
+#
+# DESC: logrotate configuration file for OEM files.
+#
+# $HeadURL$
+# $LastChangedBy$
+# $LastChangedDate$
+# $LastChangedRevision$
+#
+# LOG:
+# yyyy/mm/dd [user] - [notes]
+# 2014/02/20 cgwong - [v1.0.0] Creation from notes.
+# 2014/03/10 cgwong - [v1.1.0] Updated to UNIX format, added AD logs
+######################################################
+
+# Global options
+
+# WebTier (OHS) logs
+/u01/app/oracle/product/fmw/gc_inst/WebTierIH1/diagnostics/logs/OHS/ohs1/em_upload_http_access_log.* /u01/app/oracle/product/fmw/gc_inst/WebTierIH1/diagnostics/logs/OHS/ohs1/em_upload_https_access_log.* /u01/app/oracle/product/fmw/gc_inst/WebTierIH1/diagnostics/logs/OHS/ohs1/access_log.* /u01/app/oracle/product/fmw/gc_inst/WebTierIH1/diagnostics/logs/OHS/ohs1/ohs1-*.log
+{
+  nocompress
+  weekly
+  rotate 0
+  missingok
+}
+
+# WebTier (OHS) additional logs
+/u01/app/oracle/product/fmw/gc_inst/WebTierIH1/diagnostics/logs/OHS/ohs1/console~OHS~1.log* /u01/app/oracle/product/fmw/gc_inst/WebTierIH1/diagnostics/logs/OHS/ohs1/mod_wl_ohs.log*
+{
+  nocompress
+  weekly
+  rotate 0
+  missingok
+  sharedscripts
+  postrotate
+    /usr/bin/find /u01/app/oracle/product/fmw/gc_inst/WebTierIH1/diagnostics/logs/OHS/ohs1 -name "console~OHS~1.log*" -mtime +14 -exec /bin/rm -f {} \;
+    /usr/bin/find /u01/app/oracle/product/fmw/gc_inst/WebTierIH1/diagnostics/logs/OHS/ohs1 -name "mod_wl_ohs??????????.log*" -mtime +14 -exec /bin/rm -f {} \;
+  endscript
+}
+
+# Domain Admin Server logs
+/u01/app/oracle/product/fmw/gc_inst/user_projects/domains/GCDomain/servers/EMGC_ADMINSERVER/logs/EMGC_ADMINSERVER.out*
+{
+  nocompress
+  weekly
+  rotate 0
+  missingok
+  sharedscripts
+  postrotate
+    /usr/bin/find /u01/app/oracle/product/fmw/gc_inst/user_projects/domains/GCDomain/servers/EMGC_ADMINSERVER/logs -name "EMGC_ADMINSERVER.out?????" -mtime +14 -exec /bin/rm -f {} \;
+  endscript
+}
+
+# Managed Server logs
+/u01/app/oracle/product/fmw/gc_inst/user_projects/domains/GCDomain/servers/EMGC_OMS*/logs/EMGC_OMS*.out*
+{
+  nocompress
+  weekly
+  rotate 0
+  missingok
+  sharedscripts
+  postrotate
+    /usr/bin/find /u01/app/oracle/product/fmw/gc_inst/user_projects/domains/GCDomain/servers/EMGC_OMS*/logs -name "EMGC_OMS?.out*?????" -mtime +14 -exec /bin/rm -f {} \;
+  endscript
+}
+
+# BI Publisher logs
+/u01/app/oracle/product/fmw/gc_inst/user_projects/domains/GCDomain/servers/BIP/logs/BIP.out*
+{
+  nocompress
+  weekly
+  rotate 0
+  missingok
+  sharedscripts
+  postrotate
+    /usr/bin/find /u01/app/oracle/product/fmw/gc_inst/user_projects/domains/GCDomain/servers/BIP/logs -name "BIP.out?????" -mtime +14 -exec /bin/rm -f {} \;
+  endscript
+}
+
+# AD logs
+/u01/app/oracle/product/fmw/gc_inst/user_projects/domains/GCDomain/ldap_trace.logATN
+{
+  compress
+  weekly
+  rotate 5
+  missingok
+  size 5M
+  notifempty
+}

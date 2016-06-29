@@ -1,0 +1,74 @@
+# #################################################################
+# NAME: emagent-sudo
+#
+# DESC: SUDO commands for Oracle Enterprise Manager (OEM) usage,
+#       add file to /etc/sudoers.d for sudo version 1.7 and higher.
+#       Ensure line "#includedir /etc/sudoers.d" exists in /etc/sudoers file.
+#
+# $HeadURL$
+# $LastChangedBy$
+# $LastChangedDate$
+# $LastChangedRevision$
+#
+# LOG
+# yyyy/mm/dd [user]: [notes]
+# 2013/11/12 cgwong: Created file from previous (v1.0)
+# 2013/11/21 cgwong: Added additional notes in description.
+# 2013/11/26 cgwong: Added ORA_PROV_ORACLE usage
+#                    Enabled groups to run ORA_EM_PROV_ROOT
+#                    Updated ORA_EM_PROV_ORACLE section with staging name instead of AGENT_BASE
+# 2014/01/17 cgwong: [v1.0.1] Updated comments
+# 2014/03/10 cgwong: [v1.1.0] Corrected syntax errors
+# 2014/03/11 cgwong: [v1.1.1] Corrected further syntax errors
+#                    Corrected user and runas aliases
+# 2014/04/29 cgwong: [v1.2.1] Added SAP Basis account access
+# #################################################################
+
+###### Begin OEM specifications ######
+
+## Cmnd aliases specification ##
+
+# Oracle Clone provisioning commands (oracle)
+Cmnd_Alias ORA_PROV_ORACLE = /bin/tar, \
+  /u01/app/oracle/product/*/*/clone/bin/clone.pl, /u01/app/*/*/clone/bin/clone.pl, \
+  /oracle/app/oracle/product/*/*/clone/bin/clone.pl, /oracle/app/*/*/clone/bin/clone.pl
+  
+# OEM provisioning commands to run as root
+Cmnd_Alias ORA_EM_PROV_ROOT = /usr/bin/id, /bin/tar, \
+  /opt/emagent/*/agentdeployroot.sh, \
+  /opt/emagent/core/*/root.sh, \
+  /opt/emagent/sbin/nmosudo
+
+# OEM provisioning commands to run under locked account
+# For simplicity the below can be used instead of full listing
+# Cmnd_Alias ORA_EM_PROV_ORACLE = /bin/sh
+Cmnd_Alias ORA_EM_PROV_ORACLE = /usr/bin/id, /bin/tar, /bin/chmod, /bin/cp, /bin/rm, /bin/mkdir, \
+  /opt/emagent/agent_inst/bin/emctl, \
+  /tmp/emastage/*/agentDeploy.sh, \
+  /tmp/emastage/*/prereq_stage/core/*/oui/bin/runInstaller \
+  /tmp/emastage/unzip, /tmp/emastage/*/unzipTmp/unzip
+  
+## Runas aliases specification ##
+
+# Oracle accounts
+Runas_Alias APP_OWNERS = oracle, web
+Runas_Alias EM_OWNERS = emagent
+
+## User aliases specification ##
+User_Alias EM_ADMIN = emagent
+
+## User privilege specification ##
+
+# Oracle EM Agent tools access for provisioning
+EM_ADMIN ALL = (root) NOPASSWD: ORA_EM_PROV_ROOT
+EM_ADMIN ALL = (APP_OWNERS) NOPASSWD: ORA_EM_PROV_ORACLE, ORA_PROV_ORACLE
+
+# Account access
+%dbas ALL = (root) ORA_EM_PROV_ROOT
+%dbas ALL = (EM_OWNERS) ALL
+%nam-web-admins ALL = (root) ORA_EM_PROV_ROOT
+%nam-web-admins ALL = (EM_OWNERS) ALL
+%sap_basis-u ALL = (root) ORA_EM_PROV_ROOT
+%sap_basis-u ALL = (EM_OWNERS) ALL
+
+###### End OEM specifications ######

@@ -1,0 +1,129 @@
+#!/bin/bash
+
+##########################################################
+# Name: emagent-preinstall-verify
+#
+# Description: A script to verify and set Oracle preinstall
+#              settings for EM Agent 12c on RHEL6.
+# LOG:
+# yyyy/mm/dd [login] [notes]
+# 2014/04/03 cgwong [v1.0.0] Initial creation.
+##########################################################
+
+# -- VARIABLES -- #
+PWD=`/usr/bin/readlink $0`
+PWD=`/usr/bin/dirname ${PWD:-$0}`
+BASE_DIR=`cd ${PWD} && /bin/pwd`
+
+LOG_DIR=/var/log/emagent-preinstall
+LOG_FILE=${LOG_DIR}/emagent-verify.log
+BACKUP_DIR=${LOG_DIR}/backup/`date "+%Y%m%d-%H%M%S"`
+EMBASE_DIR=/opt/emagent
+
+EMUSER=emagent
+EMGROUP=emagent
+USERID="20666"
+GROUPID="2633"
+
+CUT="/bin/cut"
+SED="/bin/sed"
+
+LARCH=`/bin/uname -m | $SED 's/^[ \t]*//' |  $SED 's/[ \t]*$//'`
+LKERNEL=`/bin/uname -r | $SED 's/^[ \t]*//' |  $SED 's/[ \t]*$//'`
+LDISTRO=`/bin/cat /etc/issue | $SED '/^$/d' | $SED q | $SED 's/Welcome to//g' | $CUT -d"(" -f1 | $SED 's/^[ \t]*//' | $SED 's/[ \t]*$//' `
+/bin/cat /proc/cpuinfo | /bin/grep -i "vendor_id" | /bin/grep -i "intel" 1> /dev/null
+if [ "$?" -eq "0" ]; then
+  LPROCESSOR=Intel
+else
+  LPROCESSOR=AMD
+fi
+
+# -- FUNCTIONS -- #
+
+f_createuser ()
+{ # Add oracle user. If present, do nothing but create the mandatory groups
+  groupnum=`cat /etc/group | sort -t: -g +2 -3 | grep -v nfsnobody | cut -f3 -d":" | tail -1`
+  if [ "${groupnum}" -ge "${GROUPID}" ]; then
+    GROUPID=`expr $groupnum + 1`
+  fi
+  usernum=`cat /etc/passwd | sort -t: -g +2 -3 | grep -v nfsnobody | cut -f3 -d":" | tail -1`
+  if [ "${usernum}" -ge "${USERID}" ]; then
+    USERID=`expr $usernum + 1`
+  fi
+  
+  # Add the group
+  echo "Adding group with gid ${GROUPID}"     >> ${LOG_FILE}
+  /usr/sbin/groupadd -g ${GROUPID} ${EMUSER}  >> ${LOG_FILE} 2>&1
+  if [ $? -ne 0 ]; then
+    GROUPID=`grep "^${EMGROUP}:" /etc/group | cut -d":" -f3`
+    echo "Group ${EMGROUP} exists with gid ${GROUPID}"  >> ${LOG_FILE}
+    echo "Failed to create ${EMGROUP}."                  >> ${LOG_FILE}
+  fi
+  
+  /bin/grep "^${EMUSER}:" /etc/passwd > /dev/null 2>&1
+  if [ $? -ne 0 ]; then
+    # Add the user - password is disabled.
+    echo "Adding user ${EMUSER} with user id ${USERID}, initial login group ${EMGROUP} with home directory /home/${EMUSER}. Please add any supplementary groups." >> ${LOG_FILE}
+    /usr/sbin/useradd -u ${USERID} -g ${EMGROUP} -m -d /home/${EMUSER} -s /bin/bash ${EMUSER}  >> ${LOG_FILE} 2>&1
+    if [ "$?" -eq "0" ]; then
+      echo "Changing ownership of /home/${EMUSER} to ${EMUSER}:${EMGROUP}"  >> ${LOG_FILE}
+      /bin/chown -R ${EMUSER}:${EMGROUP} /home/${EMUSER}                    >> ${LOG_FILE} 2>&1
+    else		
+      echo "Failed to create ${EMUSER} user.. .." >> ${LOG_FILE}
+      return 1;
+    fi
+    echo "Please set password for ${EMUSER} user" >> ${LOG_FILE}
+  else
+    echo "User ${EMUSER} is already present" >> ${LOG_FILE}
+  fi
+  user_info=`/usr/bin/id ${EMUSER}`
+  echo "${user_info}" >> ${LOG_FILE}
+  return 0;
+}
+
+f_setupdir ()
+{ # Setup software directory
+  # Create the software base directory
+  [ ! -d ${EMBASE_DIR} ] && mkdir ${EMBASE_DIR}
+  
+  # Change the ownership
+  /bin/chown -R ${EMUSER}:${EMGROUP} ${EMBASE_DIR}
+  /bin/chmod 755 ${EMBASE_DIR}
+  
+  # Ensure empty directory
+  if [ `ls -A ${EMBASE_DIR}/* 2>/dev/null | wc -l` -gt 0 ]; then   # Not empty directory
+    /bin/rm -rf ${EMBASE_DIR}/*
+  fi
+}
+
+# -- MAIN -- #
+
+export PATH=$PATH:/usr/sbin:/sbin:/usr/bin
+USER=`/usr/bin/id -un -n`
+if [ "${USER}" != "root" ]; then
+  echo ""
+  echo "Error: this script needs to be executed as root user"
+  echo "Exiting.."
+  echo ""
+  exit 1;
+fi
+
+mkdir --mode 0700 -p ${LOG_DIR};
+/usr/bin/test -d ${LOG_DIR} && /bin/rm -f ${LOG_DIR}/* 2> /dev/null;
+
+mkdir --mode 0700 -p ${BACKUP_DIR};
+
+f_createuser;
+if [ $? -ne 0 ]; then
+  echo "Creating ${EMUSER} user failed " >> ${LOG_FILE}
+  echo "" >> ${LOG_FILE}
+else
+  echo "Creating ${EMUSER} user passed " >> ${LOG_FILE}
+  echo "" >> ${LOG_FILE}
+fi;
+
+f_setupdir;
+
+exit 0
+
+# End

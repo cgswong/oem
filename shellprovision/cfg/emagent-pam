@@ -1,0 +1,34 @@
+#%PAM-1.0
+# #################################################################
+# NAME: emagent
+#
+# DESC: PAM configuration file for EM Agent. Not applicable for
+#       RHEL/OL 6.x versions.
+#
+# $HeadURL$
+# $LastChangedBy$
+# $LastChangedDate$
+# $LastChangedRevision$
+#
+# LOG:
+# yyyy/mm/dd [login] [notes]
+# 2014/02/17 cgwong v1.0.0 Initial creation.
+# #################################################################
+
+##auth      required    pam_ldap.so
+##account   required    pam_ldap.so
+##password  required    pam_ldap.so
+##session   required    pam_ldap.so
+
+auth      sufficient  pam_unix2.so nullok
+auth      sufficient  pam_vas3.so get_nonvas_pass try_first_pass
+auth      requisite   pam_vas3.so echo_return
+auth      sufficient  pam_unix.so shadow nullok use_first_pass
+auth      required    pam_unix_auth.so shadow nullok
+account   sufficient  pam_unix2.so
+account   sufficient  pam_vas3.so
+account   requisite   pam_vas3.so echo_return
+account   sufficient  pam_unix.so
+account   required    pam_unix_acct.so
+password  required    pam_deny.so
+session   required    pam_deny.so
